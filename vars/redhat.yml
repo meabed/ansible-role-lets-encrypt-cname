@@ -1,0 +1,4 @@
+---
+# roles/lte-acme-cname/vars/debian.yml
+
+lte-acme-cname_package_extension: 'rpm'

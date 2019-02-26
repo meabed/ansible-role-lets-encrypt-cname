@@ -1,0 +1,35 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+
+  vars:
+    - ler53_cert_common_name: "{{ lookup('env','MOLECULE_DISTRO') }}-{{ lookup('env','TRAVIS_COMMIT') }}.earth.career"
+    - ler53_domain_name: earth.career
+    - ler53_access_key: "{{ lookup('env','LTE_ACCESS_KEY') }}"
+    - ler53_secret_key: "{{ lookup('env','LTE_SECRET_KEY') }}"
+    - ler53_cert_live: false  # staging lets encrypt acme server
+
+  pre_tasks:
+    - debug:
+        msg: >-
+          {{ ansible_distribution }} -
+          {{ ansible_distribution_major_version }} -
+          {{ ansible_distribution_version }} -
+          UID: {{ ansible_user_id }} -
+          REAL_UID: {{ ansible_real_user_id }} -
+          {{ ansible_real_group_id }} -
+          {{ acme_directory }}
+
+    - name: Update apt cache.
+      apt: update_cache=yes cache_valid_time=600
+      when: ansible_os_family == 'Debian'
+      changed_when: false
+
+    - name: Install apt
+      apt:
+        name: apt-utils
+      when: ansible_os_family == 'Debian'
+
+  roles:
+    - role: meabed.lets_encrypt_cname

@@ -1,0 +1,5 @@
+---
+# roles/lte-acme-cname/vars/debian.yml
+
+# Debian specific vars
+lte-acme-cname_package_extension: 'deb'

@@ -1,0 +1,44 @@
+---
+# roles/lte-acme-cname/tasks/debug.yml
+
+- name: "Debug - group and host vars from {{ hostvars[inventory_hostname] }}"
+  debug: msg="{{ hostvars[inventory_hostname] }}"
+  when: ler53_debug
+
+- name: "Debug - ansible playbook variable values"
+  debug: msg="{{ vars }}"
+  when: ler53_debug
+
+- name: "Debug value of playbook vars"
+  debug: msg="{{ vars | to_yaml }}"
+  when: ler53_debug
+
+# Any custom vars you want printed last
+#
+# Some examples
+
+- name: Debug - value of inventory_hostname
+  debug: msg="{{ item }}"
+  with_items:
+    - inventory_hostname
+    - ansible_hostname
+  when: ler53_debug
+
+- name: Debug - ansible playbook variable values
+  debug: msg="{{ ansible_hostname }}"
+
+  when: ler53_debug
+
+## Distribution
+- name: Debug - ansible_distribution
+  debug: msg="{{ ansible_distribution }}"
+  when: ler53_debug
+- name: Debug - ansible_distribution_release
+  debug: msg="{{ ansible_distribution_release }}"
+  when: ler53_debug
+- name: Debug - ansible_distribution_version
+  debug: msg="{{ ansible_distribution_version }}"
+  when: ler53_debug
+- name: Debug - ansible_distribution_major_version
+  debug: msg="{{ ansible_distribution_major_version }}"
+  when: ler53_debug

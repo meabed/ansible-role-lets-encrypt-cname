@@ -1,0 +1,34 @@
+---
+- name: domain lets encrypt
+  hosts:
+    - localhost
+  pre_tasks:
+    - debug:
+        msg: >-
+          {{ ansible_distribution }} -
+          {{ ansible_distribution_major_version }} -
+          {{ ansible_distribution_version }} -
+          UID: {{ ansible_user_id }} -
+          REAL_UID: {{ ansible_real_user_id }} -
+          {{ ansible_real_group_id }} -
+          {{ acme_directory }}
+
+    - name: revmoe data folders
+      file:
+        name: "{{ item }}"
+        state: absent
+      with_items:
+        - ./ssl
+        - ./lse_key
+      ignore_errors: true
+
+  vars:
+    - ler53_cert_sans:
+        - "*.earth.career"
+    - ler53_cert_common_name: "earth.career"
+    - ler53_domain_name: earth.career
+    - ler53_access_key: "{{ lte_access_key }}"
+    - ler53_secret_key: "{{ lte_secret_key }}"
+    - ler53_cert_live: false  # staging lets encrypt acme server
+  roles:
+    - { role: ansible-lte-acme-cname }

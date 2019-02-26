@@ -1,0 +1,31 @@
+---
+dependencies: []
+galaxy_info:
+  role_name: lets_encrypt_cname
+  author: 'Mohamed Meabed'
+  description: 'SSL Certificate Generator through Lets Encrypt and Route53 Cname'
+  company: 'dev.me'
+  license: "license (BSD, MIT)"
+  min_ansible_version: '2.6'
+
+  platforms:
+    - name: Debian
+      versions:
+        - all
+    - name: Ubuntu
+      versions:
+        - trusty
+        - xenial
+        - bionic
+
+  galaxy_tags:
+    - mcin
+    - ssl
+    - letsencrypt
+    - sslcertificate
+    - acme
+    - centos
+    - debian
+    - ubuntu
+
+allow_duplicates: true

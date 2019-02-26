@@ -1,0 +1,30 @@
+---
+language: python
+services: docker
+branches:
+  only:
+    - master
+env:
+  global:
+    - ROLE_NAME: meabed.lets_encrypt_cname
+    - REPO_NAME: ansible-role-lets-encrypt-cname
+    # yamllint disable-line
+    - secure: er6upGViZBY+hs6Mm1ioBKxDwGCzeEP6ol+bZFGemEtlLzJ4BRq+JFQXpDhVAqWlQu/Pa69Ivc6hUbqqdXS2VLOW27CakxBa+NYJae21Mdnw14laYrAdF38+aTZ4ZTGGVC4Us9XVgUkhw+rmYwArFeE7BVuaSCGmh/qnP1LNSzN4SdtpxImlBU3jsNMJm/Gb89IqQUXrTaL2DIrAJ4okoGo3Oi/aIT+/af+KLLntpVsNCxnUnSMrYHXST+kG82ZUbUHUHrckToQJJzJdhmVzAlVDeIgkgNbglJlaNPHretT1ALFxJU//G/zrmGTmqE2bnGRmuo9qn3Fw4BJXg9jwkW4OOyM8J5a6P/aFr9zUegk3j+aLQhmRK2hFbPDFgc2vxVxZA0VHdbCJmJuFyLgMyU4Lcz1IixLaUOXYKuBSt8D3BZOYl741dFJAnNDXoxygRvhFeLLMSZtHgTE6hq85vbS6UQDHISfA5i91Eic9vvVnpN5ihm93LOhXoHkk5PNa9LfCYM8Zwu+HNqixsQTx2/0aFfClna4SZtw87fulc0OVe3ZesYkG2Mu3sLsXKYlIqcKEBMXnMEq0EnjkcpfTIgddN3HxlF4QtyrJCkJf/VldpGUCRCOAqdKTnxhL9dtyCPj5vdZWh+ej0pujJ11T9GLGW+fIkMLnkwJk1fBb0Yc=
+    # yamllint disable-line
+    - secure: XfN/iy/Wx5CRQmBHyDMtc+A4eTfpaesvInME47aSIEClc0gMT/1dE6EnviI+3w2G6CslW9XpgCI5aCg/YlllZN6hlAim0VdKYnwW4jm2xMFYNNNJSudsWnEiTWb2yOedwc68pSNUso7ozZ1S2W615V14fLdZsytEyUt0owrjzqjqF6h8bstoHtGUu8cu86GWRUyG83En4SkzfCgkYPlkrpWBIoLM5umHBw2OsVgcGK0tj7+CsEVaPu0sRU5DWdi7n7xE2AG0613XnCrbX0YcNY9vy0kpyMbbIkuOgPbMTIrgL2iIMnuP31hg5PGJyuLnjflFGyGMQigHvIJq/KNGMy3jvs3U7zLWM6d1e9y9ihclyYaV2ziEiD2IbIXPAR+sDvzx8BQ7HqMrnt/hXT8NkH/ZeXHh0lRKdE9MxrIvSSsxjD68ym4gnAQVnuPoGC2S16EzO2v9TsCYCX3PInYfEIX9F6sEggEWlTSN/fWFVq16Mlwdh87N9/50vYrwrdccOcly9C/OzTaAabpZAoiMPCKeen7JiSG9Nng7JmzCuxxnVjzfnzjyLJpzV+0Ter8md5tcLLv4VreVca61NupPGqg89HqniKPD6QDR33Erg47hAJz5MaXl7NXd/4eRIbnYNSSWNOK26cyc6T46td0yriOUfyJ3k0K35AhjvzN7UUk=
+  matrix:
+    - MOLECULE_DISTRO: ubuntu1804
+    - MOLECULE_DISTRO: ubuntu1604
+    - MOLECULE_DISTRO: ubuntu1404
+    - MOLECULE_DISTRO: debian8
+    - MOLECULE_DISTRO: debian9
+install:
+  - pip install molecule docker
+before_script:
+  - cd ../
+  - mv $REPO_NAME $ROLE_NAME
+  - cd $ROLE_NAME
+script:
+  - molecule test
+notifications:
+  webhooks: https://galaxy.ansible.com/api/v1/notifications/

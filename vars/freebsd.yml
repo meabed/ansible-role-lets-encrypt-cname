@@ -1,0 +1,4 @@
+---
+# roles/lte-acme-cname/vars/freebsd.yml
+
+lte-acme-cname_package_extension: 'rpm'

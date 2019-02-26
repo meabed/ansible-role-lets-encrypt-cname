@@ -1,0 +1,139 @@
+---
+- name: Run Debian specific tasks
+  include_tasks: debian.yml
+  static: false
+  when: ansible_os_family == 'Debian'
+
+- name: Run Debug
+  include_tasks: debug.yml
+  static: false
+  when: ler53_debug|bool == True
+
+- name: "create the {{ ler53_cert_dir }} directory"
+  file:
+    path: "{{ ler53_cert_dir }}"
+    state: directory
+    owner: "{{ ansible_user_id }}"
+    mode: 0755
+
+- name: "create the {{ ler53_account_key_dir }} directory"
+  file:
+    path: "{{ ler53_account_key_dir }}"
+    owner: "{{ ansible_user_id }}"
+    mode: 0700
+    state: directory
+
+- name: generate the private key
+  openssl_privatekey:
+    path: "{{ ler53_cert_dir }}/{{ ler53_key_file_name }}"
+    size: "{{ ler53_key_size }}"
+
+- name: set the private key file permissions
+  file:
+    path: "{{ ler53_cert_dir }}/{{ ler53_key_file_name }}"
+    mode: "{{ ler53_cert_files_mode }}"
+
+- name: generate the CSR
+  openssl_csr:
+    path: "{{ ler53_cert_dir }}/{{ ler53_csr_file_name }}"
+    privatekey_path: "{{ ler53_cert_dir }}/{{ ler53_key_file_name }}"
+    common_name: "{{ ler53_cert_common_name }}"
+    key_usage: "{{ ler53_cert_key_usages }}"
+    subject_alt_name: "DNS:{{ ler53_cert_common_name }}{{ ',DNS:' + ',DNS:'.join(ler53_cert_sans) if ler53_cert_sans else '' }}"
+    extended_key_usage: "{{ ler53_cert_extended_key_usages | default(omit) }}"
+  register: generate_csr
+
+- name: generate the Lets Encrypt account key
+  openssl_privatekey:
+    path: "{{ ler53_account_key_dir }}/{{ ler53_account_key_file_name }}"
+    size: "{{ ler53_account_key_size }}"
+
+- name: set the Lets Encrypt account key file permissions
+  file:
+    path: "{{ ler53_account_key_dir }}/{{ ler53_account_key_file_name }}"
+    owner: "{{ ansible_user_id }}"
+    mode: 0600
+
+- name: delete existing certificate
+  file:
+    path: "{{ ler53_cert_dir }}/{{ ler53_cert_file_name }}"
+    state: absent
+  when: generate_csr.changed and ler53_new_cert_when_csr_changes  # noqa 503
+
+- name: initiate the Lets Encrypt challenge
+  acme_certificate:
+    acme_directory: "{{ acme_directory }}"
+    challenge: dns-01
+    account_key: "{{ ler53_account_key_dir }}/{{ ler53_account_key_file_name }}"
+    csr: "{{ ler53_cert_dir }}/{{ ler53_csr_file_name }}"
+    dest: "{{ ler53_cert_dir }}/{{ ler53_cert_file_name }}"
+    account_email: "{{ ler53_account_email }}"
+    remaining_days: "{{ ler53_cert_remaining_days_before_renewal }}"
+    acme_version: 2
+    terms_agreed: "{{ ler53_cert_agreement | default(omit) }}"
+  notify: handle services
+  register: lets_encrypt_challenge
+
+- name: create the DNS records for the challenge
+  route53:
+    command: create
+    zone: "{{ ler53_domain_name }}"
+    record: "{{ item.key }}"
+    type: TXT
+    ttl: 5
+    value: "{{ item.value | map('regex_replace', '^(.*)$', '\"\\1\"' ) | list }}"
+    access_key: "{{ ler53_access_key }}"
+    secret_key: "{{ ler53_secret_key }}"
+    overwrite: true
+    wait: true
+  with_dict: "{{ lets_encrypt_challenge['challenge_data_dns'] | default({}) }}"
+
+- name: validate the Lets Encrypt challenge
+  acme_certificate:
+    acme_directory: "{{ acme_directory }}"
+    challenge: dns-01
+    account_key: "{{ ler53_account_key_dir }}/{{ ler53_account_key_file_name }}"
+    csr: "{{ ler53_cert_dir }}/{{ ler53_csr_file_name }}"
+    dest: "{{ ler53_cert_dir }}/{{ ler53_cert_file_name }}"
+    account_email: "{{ ler53_account_email }}"
+    data: "{{ lets_encrypt_challenge }}"
+    acme_version: 2
+    terms_agreed: "{{ ler53_cert_agreement | default(omit) }}"
+
+- name: delete the DNS records for the challenge
+  route53:
+    command: delete
+    zone: "{{ ler53_domain_name }}"
+    record: "{{ item.key }}"
+    type: TXT
+    ttl: 5
+    value: "{{ item.value | map('regex_replace', '^(.*)$', '\"\\1\"' ) | list }}"
+    access_key: "{{ ler53_access_key }}"
+    secret_key: "{{ ler53_secret_key }}"
+  with_dict: "{{ lets_encrypt_challenge['challenge_data_dns'] | default({}) }}"
+
+- name: download the Lets Encrypt intermediate CA
+  get_url:
+    url: https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem
+    dest: "{{ ler53_cert_dir }}/{{ ler53_intermediate_file_name }}"
+    mode: "{{ ler53_cert_files_mode }}"
+  register: ler53_intermediate_download_task
+  when: ler53_intermediate_download
+
+- name: get content of the certificate
+  command: "cat {{ ler53_cert_dir }}/{{ ler53_cert_file_name }}"
+  register: ler53_certificate_content
+  changed_when: false
+  when: ler53_intermediate_download
+
+- name: get content of the intermediate CA
+  command: "cat {{ ler53_cert_dir }}/{{ ler53_intermediate_file_name }}"
+  register: ler53_intermediate_content
+  changed_when: false
+  when: ler53_intermediate_download
+
+- name: create a file with the certificate and intermediate CA concatenated
+  copy:
+    content: "{{ ler53_certificate_content['stdout'] + '\n' + ler53_intermediate_content['stdout'] + '\n' }}"
+    dest: "{{ ler53_cert_dir }}/{{ ler53_cert_and_intermediate_file_name }}"
+  when: ler53_intermediate_download
